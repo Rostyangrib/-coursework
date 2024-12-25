@@ -2,7 +2,9 @@ import math
 
 import numpy as np
 import pandas as pd
-from pandas.plotting import table
+import mpmath
+
+from fractions import Fraction
 
 # Настройка отображения для numpy
 np.set_printoptions(precision=3)
@@ -53,13 +55,13 @@ def MatrixApdate(table, min_index, max_index):
     m, n = table.shape
     table[min_index][0] = max_index
     table[min_index, 1:] = table[min_index, 1:] / table[min_index][max_index]
-    table = np.round(table, 2)
-    for i in range(m - 1):
+
+    for i in range(m):
         if i != min_index:
             check = table[i][max_index]
             for j in range(1, n):
-                table[i][j] = table[i][j] - (check * table[min_index][j])
-    table = np.round(table, 4)
+                table[i][j] = Fraction(table[i][j] - (check * table[min_index][j])).limit_denominator(1000)
+
     return table
 
 def simplex_method(c, A, b):
@@ -68,11 +70,11 @@ def simplex_method(c, A, b):
     m, n = A.shape
     inf = 1000000
 
-    table = np.hstack([A, np.eye(m), b.reshape(-1, 1)])
+    table = np.hstack([A, np.eye(m), b.reshape(-1, 1)], dtype=object)
     #тут проблемка mm
-    cnt = m
+    cnt = n
     base_cal = np.array([])
-    while cnt < m + m:
+    while cnt < n + m:
         base_cal = np.append(base_cal, cnt + 1)
         cnt += 1
 
@@ -83,6 +85,10 @@ def simplex_method(c, A, b):
     table = np.vstack([table, padded_arr])
     table = np.hstack([base_cal.reshape(-1, 1), table])
     m, n = table.shape
+
+    for i in range(m):
+        for j in range(1, n):
+            table[i][j] = Fraction(table[i][j]).limit_denominator(100)
 
     delta = CalculateDelta(table, padded_arr)
     table[m - 1] = delta
@@ -106,7 +112,7 @@ def simplex_method(c, A, b):
 
         df = pd.DataFrame(table)
 
-        print(df)
+        #print(df)
         delta = CalculateDelta(table, padded_arr)
         table[m - 1] = delta
         max_index, neg_values = FindFeta(table, m)
@@ -116,7 +122,7 @@ def simplex_method(c, A, b):
         answer[int(table[i][0]) - 1] = table[i][n - 1]
 
     df = pd.DataFrame(table)
-    print(df)
+    #print(df)
    # print(*answer)
     return answer, table
 
