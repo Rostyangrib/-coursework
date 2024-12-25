@@ -2,15 +2,14 @@ import math
 
 import numpy as np
 import pandas as pd
-from pandas.plotting import table
+
 
 # Настройка отображения для numpy
 np.set_printoptions(precision=3)
 pd.set_option('display.width', 200)
 pd.set_option('display.max_columns', None)
 
-def FindFeta(table, m):
-    row = table[m - 1]
+def FindFeta(row):
     neg_values = 0
     max_abs_index = -1
     max = 1000000
@@ -58,36 +57,40 @@ def MatrixApdate(table, min_index, max_index):
         if i != min_index:
             check = table[i][max_index]
             for j in range(1, n):
-                table[i][j] = table[i][j] - (check * table[min_index][j])
+                a = table[i][j]
+                table[i][j] = round(round(table[i][j], 4) - round(check * table[min_index][j], 4), 4)
+                a = table[i][j]
+                if round(abs(table[i][j]), 3) <= 0.005:
+                    table[i][j] = 0
+
     table = np.round(table, 4)
     return table
 
-def simplex_method(c, A, b):
+def simplex_method(table):
     np.set_printoptions(linewidth=200)
-
-    m, n = A.shape
     inf = 1000000
 
-    table = np.hstack([A, np.eye(m), b.reshape(-1, 1)])
-    #тут проблемка mm
-    cnt = m
-    base_cal = np.array([])
-    while cnt < m + m:
-        base_cal = np.append(base_cal, cnt + 1)
-        cnt += 1
-
-    base_cal = np.append(base_cal, 0)
-
-    padded_arr = np.pad(c, (0, table.shape[1] - len(c)), mode='constant', constant_values=0)
-
-    table = np.vstack([table, padded_arr])
-    table = np.hstack([base_cal.reshape(-1, 1), table])
     m, n = table.shape
 
-    delta = CalculateDelta(table, padded_arr)
-    table[m - 1] = delta
 
-    max_index, neg_values = FindFeta(table, m)
+    ch = table[:-1, n-1]
+    idx = -1
+    has_negatives = np.any(table[:, n-1] < 0)
+    while has_negatives:
+        for i, j in enumerate(ch):
+            if math.copysign(1, j) == -1:
+                idx = i
+                break
+        if idx != -1:
+            #???
+            min_index, neg_values = FindFeta(table[idx, 1:-1])
+            table = MatrixApdate(table, idx, min_index + 1)
+
+        has_negatives = np.any(table[:, n-1] < 0)
+        idx = -1
+        ch = table[:-1, n - 1]
+
+    max_index, neg_values = FindFeta(table[m-1])
 
     while neg_values > 0:
         feta = np.zeros(m - 1)
@@ -120,28 +123,3 @@ def simplex_method(c, A, b):
    # print(*answer)
     return answer, table
 
-
-# c = np.array([12, 16])
-# A = np.array([[2, 6], [5, 4], [2, 3]])
-# b = np.array([24, 31, 18])
-
-# пример для демо метода гамори
-c = np.array([2,3 , 1])
-A = np.array([[9, 3, 4], [3, 4, 1], [1, 1, 1]])
-b = np.array([5, 6, 7])
-
-# c = np.array([1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-# A = np.array([[2, -100, -400, -20, -200, -600, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-#               [1, 0, 0, 0, 0, 0, -15, -200, -25, -50, -250, 0, 0, 0, 0, 0],
-#               [3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, -100, -150, -200, -25, -350],
-#
-#               [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-#               [0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0],
-#               [0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0],
-#               [0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0],
-#               [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]])
-#
-# b = np.array([0, 0, 0, 5, 3, 40, 9, 2])
-
-#optimal_solution = simplex_method(c, A, b)
-print("Оптимальное решение:")
